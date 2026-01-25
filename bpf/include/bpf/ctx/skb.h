@@ -62,6 +62,24 @@
  */
 #define get_hash(ctx)		ctx->hash
 
+// JB: native compilation
+#if defined(__ARCH_X86_64)
+#define DEFINE_FUNC_CTX_POINTER(FIELD)						\
+static __always_inline void *							\
+ctx_ ## FIELD(const struct __sk_buff *ctx)					\
+{										\
+	void *ptr;								\
+										\
+	/* LLVM may generate u32 assignments of ctx->{data,data_end,data_meta}.	\
+	 * With this inline asm, LLVM loses track of the fact this field is on	\
+	 * 32 bits.								\
+	 */									\
+	asm volatile("movl %c2(%1), %k0"					\
+		     : "=r"(ptr)						\
+		     : "r"(ctx), "i"(offsetof(struct __sk_buff, FIELD)));	\
+	return ptr;								\
+}
+#else
 #define DEFINE_FUNC_CTX_POINTER(FIELD)						\
 static __always_inline void *							\
 ctx_ ## FIELD(const struct __sk_buff *ctx)					\
@@ -77,6 +95,8 @@ ctx_ ## FIELD(const struct __sk_buff *ctx)					\
 		     : "r"(ctx), "i"(offsetof(struct __sk_buff, FIELD)));	\
 	return ptr;								\
 }
+#endif
+
 /* This defines ctx_data(). */
 DEFINE_FUNC_CTX_POINTER(data)
 /* This defines ctx_data_end(). */

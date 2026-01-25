@@ -5,7 +5,57 @@
 
 #include "compiler.h"
 
-#if defined(__bpf__)
+// JB: native compilation
+#if defined(__ARCH_X86_64)
+
+// offset of bpf_prog->bpf_func
+#define BPF_PROG_FUNC_OFF 0xffffaaaa
+// offset of bpf_array->val
+#define BPF_ARR_VAL_OFF 0xaaaaffff
+
+#define indexed_elem_offset(index, elem_size)	(BPF_ARR_VAL_OFF + (__u64)index * elem_size)
+#define access_ptr_at_u64(ptr, offset) *(__u64*)((char *)ptr + offset)
+
+#define tail_call_native(ctx, prog_array_map, index) \
+	do {	\
+		int (*func)(typeof(ctx));	\
+		void *bpf_prog;	\
+		\
+		bpf_prog = (void *) access_ptr_at_u64(prog_array_map, indexed_elem_offset(index, sizeof(__u64)));	\
+		if (bpf_prog) {	\
+			func = (int (*)(typeof(ctx))) access_ptr_at_u64(bpf_prog, BPF_PROG_FUNC_OFF);	\
+			\
+			/* __attribute__((musttail)) */	\
+			return func(ctx);	\
+		}	\
+	} while (0)
+
+
+#define tail_call_static(ctx_ptr, map, slot)				\
+{								\
+	if (!__builtin_constant_p(slot))			\
+		__throw_build_bug();				\
+								\
+	tail_call_native(ctx_ptr, &map, slot);			\
+}
+
+#define tail_call_dynamic(ctx_ptr, map, slot)				\
+{								\
+	if (__builtin_constant_p(slot))			\
+		__throw_build_bug();				\
+								\
+	tail_call_native(ctx_ptr, map, slot);			\
+}
+
+// static __always_inline __maybe_unused void
+// tail_call_dynamic(struct __ctx_buff *ctx, const void *map, __u32 slot)
+// {
+//	if (__builtin_constant_p(slot))
+//		__throw_build_bug();
+//	
+//	tail_call_native(ctx, map, slot);
+// }
+#elif defined(__bpf__)
 
 /* Don't gamble, but _guarantee_ that LLVM won't optimize setting
  * r2 and r3 from different paths ending up at the same call insn as

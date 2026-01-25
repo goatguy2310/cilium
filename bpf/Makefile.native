@@ -1,0 +1,21 @@
+# JIT Benchmark project
+
+FLAGS_NAT := -I$(ROOT_DIR)/bpf -I$(ROOT_DIR)/bpf/include -O2 -g
+
+CLANG_FLAGS_NATIVE := ${FLAGS_NAT} --target=x86_64 -std=gnu99 -nostdinc
+CLANG_FLAGS_NATIVE += -D__ARCH_X86_64
+CLANG_FLAGS_NATIVE += -ftrap-function=__undefined_trap	\
+		-Wall -Werror -Wextra -Wshadow	\
+		-Wno-address-of-packed-member	\
+		-Wno-unknown-warning-option	\
+		-Wno-gnu-variable-sized-type-not-at-end	\
+		-Wimplicit-int-conversion -Wenum-conversion	\
+		-Wimplicit-fallthrough
+CLANG_FLAGS_NATIVE += -Wno-unknown-attributes -Wno-unused-parameter	\
+		-Wno-pointer-sign -Wno-compare-distinct-pointer-types -mcmodel=medium 	\
+		-fno-pic -fno-pie -fcf-protection=branch	\
+		-mskip-rax-setup -fno-jump-tables -mno-red-zone	\
+		-mno-sse -mno-sse2 -mno-avx -mno-mmx -mno-80387 -mno-fp-ret-in-387	\
+		-fno-delete-null-pointer-checks -Wframe-larger-than=512 -fpatchable-function-entry=5
+
+all:

@@ -62,6 +62,16 @@
  * accesses must be done through this macro to ensure the loader's dead code
  * elimination can recognize them.
  */
+// JB: native compilation
+#if defined(__ARCH_X86_64)
+#define CONFIG(name)	\
+(*({			\
+	void *out;	\
+	asm volatile("movabsq $" __stringify(__config_##name) ", %0\n\t"	\
+			: "=r"(out));	\
+	(typeof(__config_##name) *)out;	\
+}))
+#else
 #define CONFIG(name)	\
 (*({			\
 	void *out;	\
@@ -81,3 +91,4 @@
 			: "=r"(out));	\
 	(typeof(__config_##name) *)out;	\
 }))
+#endif

@@ -3,6 +3,7 @@
 
 include ../Makefile.defs
 
+TARG = bpf
 BPF_SIMPLE = bpf_network.o bpf_alignchecker.o
 BPF = bpf_lxc.o bpf_overlay.o bpf_sock.o bpf_host.o bpf_wireguard.o bpf_xdp.o $(BPF_SIMPLE)
 
@@ -157,12 +158,21 @@ endif
 -include Makefile.override
 
 include ./Makefile.bpf
+include ./Makefile.native
+
+ifeq ($(TARG), native)
+CLANG_FLAGS = $(CLANG_FLAGS_NATIVE)
+else ifeq ($(TARG), bpf)
+# do nothing for now
+else
+$(error Target not found: $(TARG))
+endif
 
 .PHONY: all bpf_all build_all install clean generate gen_compile_commands
 
 all: bpf_all
 
-bpf_all: $(BPF) generate
+bpf_all: $(BPF) # generate
 
 build_all: force
 	@$(ECHO_CHECK)/*.c BUILD_PERMUTATIONS=1

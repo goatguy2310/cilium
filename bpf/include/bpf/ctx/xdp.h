@@ -42,6 +42,26 @@ xdp_load_bytes(const struct xdp_md *ctx, __u64 off, void *to, const __u64 len)
 	 * so force it the way we want it in order to open up a range
 	 * on the reg.
 	 */
+	// JB: native compilation
+#if defined(__ARCH_X86_64)
+	asm volatile("movl 0(%[ctx]), %%r10d\n\t"
+		     "movl 4(%[ctx]), %%r11d\n\t"
+		     "andq %[offmax], %[off]\n\t"
+		     "addq %[off], %%r10\n\t"
+		     "movq %%r10, %[from]\n\t"
+		     "addq %[len], %%r10\n\t"
+		     "cmpq %%r11, %%r10\n\t"
+		     "ja 1f\n\t"
+		     "xorl %k[ret], %k[ret]\n\t"
+		     "jmp 2f\n\t"
+		     "1:\n\t"
+		     "movl %[errno], %k[ret]\n\t"
+		     "2:\n\t"
+		     : [ret]"=&r"(ret), [from]"=&r"(from)
+		     : [ctx]"r"(ctx), [off]"r"(off), [len]"ri"(len),
+		       [offmax]"i"(__CTX_OFF_MAX), [errno]"i"(-EINVAL)
+		     : "r10", "r11", "cc");
+#else
 	asm volatile("r1 = *(u32 *)(%[ctx] +0)\n\t"
 		     "r2 = *(u32 *)(%[ctx] +4)\n\t"
 		     "%[off] &= %[offmax]\n\t"
@@ -56,6 +76,8 @@ xdp_load_bytes(const struct xdp_md *ctx, __u64 off, void *to, const __u64 len)
 		     : [ctx]"r"(ctx), [off]"r"(off), [len]"ri"(len),
 		       [offmax]"i"(__CTX_OFF_MAX), [errno]"i"(-EINVAL)
 		     : "r1", "r2");
+#endif
+
 	if (!ret)
 		memcpy(to, from, len);
 	return ret;
@@ -70,6 +92,26 @@ xdp_store_bytes(const struct xdp_md *ctx, __u64 off, const void *from,
 	void *to;
 	int ret;
 	/* See xdp_load_bytes(). */
+	// JB: native compilation
+#if defined(__ARCH_X86_64)
+	asm volatile("movl 0(%[ctx]), %%r10d\n\t"
+		     "movl 4(%[ctx]), %%r11d\n\t"
+		     "andq %[offmax], %[off]\n\t"
+		     "addq %[off], %%r10\n\t"
+		     "movq %%r10, %[to]\n\t"
+		     "addq %[len], %%r10\n\t"
+		     "cmpq %%r11, %%r10\n\t"
+		     "ja 1f\n\t"
+		     "xorl %k[ret], %k[ret]\n\t"
+		     "jmp 2f\n\t"
+		     "1:\n\t"
+		     "movl %[errno], %k[ret]\n\t"
+		     "2:\n\t"
+		     : [ret]"=&r"(ret), [to]"=&r"(to)
+		     : [ctx]"r"(ctx), [off]"r"(off), [len]"ri"(len),
+		       [offmax]"i"(__CTX_OFF_MAX), [errno]"i"(-EINVAL)
+		     : "r10", "r11", "cc");
+#else
 	asm volatile("r1 = *(u32 *)(%[ctx] +0)\n\t"
 		     "r2 = *(u32 *)(%[ctx] +4)\n\t"
 		     "%[off] &= %[offmax]\n\t"
@@ -84,6 +126,8 @@ xdp_store_bytes(const struct xdp_md *ctx, __u64 off, const void *from,
 		     : [ctx]"r"(ctx), [off]"r"(off), [len]"ri"(len),
 		       [offmax]"i"(__CTX_OFF_MAX), [errno]"i"(-EINVAL)
 		     : "r1", "r2");
+#endif
+
 	if (!ret)
 		memcpy(to, from, len);
 	return ret;
@@ -114,6 +158,25 @@ xdp_store_bytes(const struct xdp_md *ctx, __u64 off, const void *from,
 #define get_hash(ctx)			({ 0; })
 #define get_hash_recalc(ctx)		get_hash(ctx)
 
+// JB: native compilation
+#if defined(__ARCH_X86_64)
+#define DEFINE_FUNC_CTX_POINTER(FIELD)						\
+static __always_inline void *							\
+ctx_ ## FIELD(const struct xdp_md *ctx)						\
+{										\
+	void *ptr;								\
+										\
+	/* LLVM may generate u32 assignments of ctx->{data,data_end,data_meta}.	\
+	 * With this inline asm, LLVM loses track of the fact this field is on	\
+	 * 32 bits.								\
+	 */									\
+	asm volatile("movl %c2(%1), %k0"					\
+		     : "=r"(ptr)						\
+		     : "r"(ctx), "i"(offsetof(struct xdp_md, FIELD)));		\
+	return ptr;								\
+}
+
+#else
 #define DEFINE_FUNC_CTX_POINTER(FIELD)						\
 static __always_inline void *							\
 ctx_ ## FIELD(const struct xdp_md *ctx)						\
@@ -129,6 +192,7 @@ ctx_ ## FIELD(const struct xdp_md *ctx)						\
 		     : "r"(ctx), "i"(offsetof(struct xdp_md, FIELD)));		\
 	return ptr;								\
 }
+#endif
 /* This defines ctx_data(). */
 DEFINE_FUNC_CTX_POINTER(data)
 /* This defines ctx_data_end(). */
@@ -163,6 +227,26 @@ l3_csum_replace(const struct xdp_md *ctx, __u64 off, const __u32 from,
 	if (unlikely(size != 0 && size != 2))
 		return -EINVAL;
 	/* See xdp_load_bytes(). */
+	// JB: native compilation
+#if defined(__ARCH_X86_64)
+	asm volatile("movl 0(%[ctx]), %%r10d\n\t"
+		     "movl 4(%[ctx]), %%r11d\n\t"
+		     "andq %[offmax], %[off]\n\t"
+		     "addq %[off], %%r10\n\t"
+		     "movq %%r10, %[sum]\n\t"
+		     "addq $2, %%r10\n\t"
+		     "cmpq %%r11, %%r10\n\t"
+		     "ja 1f\n\t"
+		     "xorl %k[ret], %k[ret]\n\t"
+		     "jmp 2f\n\t"
+		     "1:\n\t"
+		     "movl %[errno], %k[ret]\n\t"
+		     "2:\n\t"
+		     : [ret]"=&r"(ret), [sum]"=&r"(sum)
+		     : [ctx]"r"(ctx), [off]"r"(off),
+		       [offmax]"i"(__CTX_OFF_MAX), [errno]"i"(-EINVAL)
+		     : "r10", "r11", "cc");
+#else
 	asm volatile("r1 = *(u32 *)(%[ctx] +0)\n\t"
 		     "r2 = *(u32 *)(%[ctx] +4)\n\t"
 		     "%[off] &= %[offmax]\n\t"
@@ -177,6 +261,8 @@ l3_csum_replace(const struct xdp_md *ctx, __u64 off, const __u32 from,
 		     : [ctx]"r"(ctx), [off]"r"(off),
 		       [offmax]"i"(__CTX_OFF_MAX), [errno]"i"(-EINVAL)
 		     : "r1", "r2");
+#endif
+
 	if (!ret)
 		from ? __csum_replace_by_4(sum, from, to) :
 		       __csum_replace_by_diff(sum, to);
@@ -200,6 +286,26 @@ l4_csum_replace(const struct xdp_md *ctx, __u64 off, __u32 from, __u32 to,
 	if (unlikely(size != 0 && size != 2))
 		return -EINVAL;
 	/* See xdp_load_bytes(). */
+	// JB: native compilation
+#if defined(__ARCH_X86_64)
+	asm volatile("movl 0(%[ctx]), %%r10d\n\t"
+		     "movl 4(%[ctx]), %%r11d\n\t"
+		     "andq %[offmax], %[off]\n\t"
+		     "addq %[off], %%r10\n\t"
+		     "movq %%r10, %[sum]\n\t"
+		     "addq $2, %%r10\n\t"
+		     "cmpq %%r11, %%r10\n\t"
+		     "ja 1f\n\t"
+		     "xorl %k[ret], %k[ret]\n\t"
+		     "jmp 2f\n\t"
+		     "1:\n\t"
+		     "movl %[errno], %k[ret]\n\t"
+		     "2:\n\t"
+		     : [ret]"=&r"(ret), [sum]"=&r"(sum)
+		     : [ctx]"r"(ctx), [off]"r"(off),
+		       [offmax]"i"(__CTX_OFF_MAX), [errno]"i"(-EINVAL)
+		     : "r10", "r11", "cc");
+#else
 	asm volatile("r1 = *(u32 *)(%[ctx] +0)\n\t"
 		     "r2 = *(u32 *)(%[ctx] +4)\n\t"
 		     "%[off] &= %[offmax]\n\t"
@@ -214,6 +320,8 @@ l4_csum_replace(const struct xdp_md *ctx, __u64 off, __u32 from, __u32 to,
 		     : [ctx]"r"(ctx), [off]"r"(off),
 		       [offmax]"i"(__CTX_OFF_MAX), [errno]"i"(-EINVAL)
 		     : "r1", "r2");
+#endif
+
 	if (!ret) {
 		if (is_mmzero && !*sum)
 			return 0;
@@ -372,6 +480,16 @@ ctx_full_len(const struct xdp_md *ctx)
 	 * sometimes reorganizes expressions involving this,
 	 * which leads to "pointer arithmetic on pkt_end prohibited"
 	 */
+	// JB: native compilation
+#if defined(__ARCH_X86_64)
+	asm volatile("movl 0(%[ctx]), %%r10d\n\t"
+		     "movl 4(%[ctx]), %%r11d\n\t"
+		     "movq %%r11, %[len]\n\t"
+		     "subq %%r10, %[len]\n\t"
+		     : [len]"=r"(len)
+		     : [ctx]"r"(ctx)
+		     : "r10", "r11", "cc");
+#else
 	asm volatile("r1 = *(u32 *)(%[ctx] +0)\n\t"
 		     "r2 = *(u32 *)(%[ctx] +4)\n\t"
 		     "%[len] = r2\n\t"
@@ -379,6 +497,8 @@ ctx_full_len(const struct xdp_md *ctx)
 		     : [len]"=r"(len)
 		     : [ctx]"r"(ctx)
 		     : "r1", "r2");
+#endif
+
 	return len;
 }
 #endif
