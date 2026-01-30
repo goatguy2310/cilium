@@ -15,4 +15,8 @@
  * successfully attached. Used for tail call maps that should never be
  * repopulated while a program is still actively using it.
  */
+#if defined(__JB_bpf__)
+#define CILIUM_PIN_REPLACE LIBBPF_PIN_BY_NAME
+#else
 #define CILIUM_PIN_REPLACE 1 << 4
+#endif
