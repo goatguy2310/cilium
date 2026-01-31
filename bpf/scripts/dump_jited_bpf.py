@@ -17,6 +17,7 @@ def guess_prog_type(filename):
         "bpf_wireguard.o": "classifier",
         "bpf_net.o": "classifier",
         "bpf_network.o": "classifier",
+        "bpf_alignchecker.o": "classifier",
         "bpf_xdp.o": "xdp",
     }
     return name_type_map.get(filename, None)
