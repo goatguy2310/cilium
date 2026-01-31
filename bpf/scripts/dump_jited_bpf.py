@@ -40,8 +40,9 @@ def load_program(file_path, base_name, pin_path=None):
     prog_type = guess_prog_type(base_name)
     if prog_type:
         load_cmd.extend(["type", prog_type])
+    print(load_cmd)
 
-    result = subprocess.run(load_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    result = subprocess.run(load_cmd, text=True)
     return result.returncode == 0
 
 def get_current_btf_id(pin_path=None):
@@ -81,10 +82,11 @@ def dump_jit_bpf(obj_files, out, globalize, skip_jit=False):
             print(f"Processing {obj_file}...")
 
             base_name = os.path.basename(obj_file)
-            name_without_ext = os.path.splitext(base_name)[0]
-            output_dir = os.path.join(out, f"{name_without_ext}_jit_dumps")
+            output_dir = ""
             if not skip_jit:
-               os.makedirs(output_dir, exist_ok=True)
+                name_without_ext = os.path.splitext(base_name)[0]
+                output_dir = os.path.join(out, f"{name_without_ext}_jit_dumps")
+                os.makedirs(output_dir, exist_ok=True)
 
             if load_program(obj_file, base_name, pin_path=pin_path):
                 print(f"Loaded all programs of {obj_file} successfully!")

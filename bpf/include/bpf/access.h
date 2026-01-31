@@ -5,7 +5,7 @@
 
 #include "compiler.h"
 
-#if defined(__bpf__) || defined(__ARCH_X86_64)
+#if defined(__bpf__) || defined(__JB_x86_64__)
 static __always_inline __maybe_unused __u32
 map_array_get_32(const __u32 *array, __u32 index, const __u32 limit)
 {
@@ -21,7 +21,7 @@ map_array_get_32(const __u32 *array, __u32 index, const __u32 limit)
 	 * always valid.
 	 */
 	// JB: native compilation
-#if defined(__ARCH_X86_64)
+#if defined(__JB_x86_64__)
 	__u64 index_64 = index;
 	__u64 limit_64 = limit;
 

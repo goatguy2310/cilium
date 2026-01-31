@@ -4,7 +4,7 @@ FLAGS_NAT := -I$(ROOT_DIR)/bpf -I$(ROOT_DIR)/bpf/include -O2 -g
 
 CLANG_FLAGS_NATIVE := ${FLAGS_NAT} --target=x86_64 -std=gnu99 -nostdinc
 # CLANG_FLAGS_NATIVE := ${FLAGS_NAT} -march=x86-64-v2 -std=gnu99 -nostdinc
-CLANG_FLAGS_NATIVE += -D__ARCH_X86_64
+CLANG_FLAGS_NATIVE += -D__JB_x86_64__
 CLANG_FLAGS_NATIVE += -ftrap-function=__undefined_trap	\
 		-Wall -Werror -Wextra -Wshadow	\
 		-Wno-address-of-packed-member	\

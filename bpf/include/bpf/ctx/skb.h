@@ -63,7 +63,7 @@
 #define get_hash(ctx)		ctx->hash
 
 // JB: native compilation
-#if defined(__ARCH_X86_64)
+#if defined(__JB_x86_64__)
 #define DEFINE_FUNC_CTX_POINTER(FIELD)						\
 static __always_inline void *							\
 ctx_ ## FIELD(const struct __sk_buff *ctx)					\

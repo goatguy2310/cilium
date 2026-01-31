@@ -6,7 +6,7 @@
 #include "compiler.h"
 
 // JB: native compilation
-#if defined(__ARCH_X86_64)
+#if defined(__JB_x86_64__)
 
 // offset of bpf_prog->bpf_func
 #define BPF_PROG_FUNC_OFF 0xffffaaaa

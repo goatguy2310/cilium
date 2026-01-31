@@ -63,7 +63,7 @@
  * elimination can recognize them.
  */
 // JB: native compilation
-#if defined(__ARCH_X86_64)
+#if defined(__JB_x86_64__)
 #define CONFIG(name)	\
 (*({			\
 	void *out;	\

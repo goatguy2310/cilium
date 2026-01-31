@@ -13,18 +13,22 @@ def rebuild_obj_files(flags=[]):
         return False
     return True
 
-
-def get_jit_sizes(obj_files):
+def get_jit_sizes():
     print("Extracting JIT info...")
-    if not rebuild_obj_files():
+    if not rebuild_obj_files(["JB=bpf"]):
         return {}
-    return dump_jited_bpf.dump_jit_bpf(obj_files, None, True)
+    cwd = os.getcwd()
+    obj_files = [os.path.join(cwd, f) for f in os.listdir(cwd) if f.endswith(".o")]
 
+    return dump_jited_bpf.dump_jit_bpf(obj_files, out=None, globalize=True, skip_jit=True)
 
-def get_native_sizes(obj_files):
+def get_native_sizes():
     print("Extracting native compilation info...")
-    if not rebuild_obj_files(["TYPE=native"]):
+    if not rebuild_obj_files(["JB=native"]):
         return {}
+    cwd = os.getcwd()
+    obj_files = [os.path.join(cwd, f) for f in os.listdir(cwd) if f.endswith(".o")]
+
     prog_sizes = dict()
     for obj_file in obj_files:
         print(f"Analyzing ELF of {obj_file}...")
@@ -45,11 +49,8 @@ if __name__ == "__main__":
 
     print("Initializing JITed vs native compilation binary size experiment...")
 
-    cwd = os.getcwd()
-    obj_files = [os.path.join(cwd, f) for f in os.listdir(cwd) if f.endswith(".o")]
-
-    jit_sizes = get_jit_sizes(obj_files)
-    nat_sizes = get_native_sizes(obj_files)
+    jit_sizes = get_jit_sizes()
+    nat_sizes = get_native_sizes()
 
     for obj_file, jit_progs in jit_sizes.items():
         if obj_file not in nat_sizes:
@@ -57,11 +58,11 @@ if __name__ == "__main__":
 
         jit_total, nat_total = 0, 0
         nat_progs = nat_sizes[obj_file]
-        for prog, sz in jit_progs.items():
+        for prog, sz in jit_progs:
             if prog not in nat_progs:
                 continue
 
             jit_total += sz
             nat_total += nat_progs[prog][1]
 
-        print(f"{obj_file}: JITed = {jit_total}, native = {nat_total}, diff = {nat_total - jit_total}, rate = {1 - nat_total / jit_total}")
+        print(f"{obj_file}: JITed = {jit_total}, native = {nat_total}, diff = {nat_total - jit_total}, rate = {1 - nat_total / jit_total if jit_total != 0 else None}")

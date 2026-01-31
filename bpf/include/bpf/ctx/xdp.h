@@ -43,7 +43,7 @@ xdp_load_bytes(const struct xdp_md *ctx, __u64 off, void *to, const __u64 len)
 	 * on the reg.
 	 */
 	// JB: native compilation
-#if defined(__ARCH_X86_64)
+#if defined(__JB_x86_64__)
 	asm volatile("movl 0(%[ctx]), %%r10d\n\t"
 		     "movl 4(%[ctx]), %%r11d\n\t"
 		     "andq %[offmax], %[off]\n\t"
@@ -93,7 +93,7 @@ xdp_store_bytes(const struct xdp_md *ctx, __u64 off, const void *from,
 	int ret;
 	/* See xdp_load_bytes(). */
 	// JB: native compilation
-#if defined(__ARCH_X86_64)
+#if defined(__JB_x86_64__)
 	asm volatile("movl 0(%[ctx]), %%r10d\n\t"
 		     "movl 4(%[ctx]), %%r11d\n\t"
 		     "andq %[offmax], %[off]\n\t"
@@ -159,7 +159,7 @@ xdp_store_bytes(const struct xdp_md *ctx, __u64 off, const void *from,
 #define get_hash_recalc(ctx)		get_hash(ctx)
 
 // JB: native compilation
-#if defined(__ARCH_X86_64)
+#if defined(__JB_x86_64__)
 #define DEFINE_FUNC_CTX_POINTER(FIELD)						\
 static __always_inline void *							\
 ctx_ ## FIELD(const struct xdp_md *ctx)						\
@@ -228,7 +228,7 @@ l3_csum_replace(const struct xdp_md *ctx, __u64 off, const __u32 from,
 		return -EINVAL;
 	/* See xdp_load_bytes(). */
 	// JB: native compilation
-#if defined(__ARCH_X86_64)
+#if defined(__JB_x86_64__)
 	asm volatile("movl 0(%[ctx]), %%r10d\n\t"
 		     "movl 4(%[ctx]), %%r11d\n\t"
 		     "andq %[offmax], %[off]\n\t"
@@ -287,7 +287,7 @@ l4_csum_replace(const struct xdp_md *ctx, __u64 off, __u32 from, __u32 to,
 		return -EINVAL;
 	/* See xdp_load_bytes(). */
 	// JB: native compilation
-#if defined(__ARCH_X86_64)
+#if defined(__JB_x86_64__)
 	asm volatile("movl 0(%[ctx]), %%r10d\n\t"
 		     "movl 4(%[ctx]), %%r11d\n\t"
 		     "andq %[offmax], %[off]\n\t"
@@ -481,7 +481,7 @@ ctx_full_len(const struct xdp_md *ctx)
 	 * which leads to "pointer arithmetic on pkt_end prohibited"
 	 */
 	// JB: native compilation
-#if defined(__ARCH_X86_64)
+#if defined(__JB_x86_64__)
 	asm volatile("movl 0(%[ctx]), %%r10d\n\t"
 		     "movl 4(%[ctx]), %%r11d\n\t"
 		     "movq %%r11, %[len]\n\t"
