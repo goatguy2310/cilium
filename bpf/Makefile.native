@@ -18,7 +18,7 @@ CLANG_FLAGS_NATIVE += -Wno-unknown-attributes -Wno-unused-parameter	\
 		-mskip-rax-setup -fno-jump-tables -mno-red-zone	\
 		-mno-sse -mno-sse2 -mno-avx -mno-mmx -mno-80387 -mno-fp-ret-in-387	\
 		-fno-vectorize -fno-slp-vectorize	\
-		-falign-functions=1 -falign-loops=1	\
+		-falign-functions=16 -falign-loops=16	\
 		-fno-delete-null-pointer-checks -Wframe-larger-than=512 -fpatchable-function-entry=5
 
 all:

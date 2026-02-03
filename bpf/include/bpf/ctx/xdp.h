@@ -513,6 +513,10 @@ struct {
 	__uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
 	__uint(key_size, sizeof(int));
 	__uint(value_size, META_PIVOT);
+// JB: ugly workaround for maps that doesn't define value but defines value_size
+#if defined(__JB_x86_64__)
+	__type(value, __u64);
+#endif
 	__uint(pinning, LIBBPF_PIN_BY_NAME);
 	__uint(max_entries, 1);
 } cilium_xdp_scratch __section_maps_btf;

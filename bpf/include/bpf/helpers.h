@@ -30,11 +30,93 @@
 #endif
 
 /* Map access/manipulation */
-// JB: inline map ops
+// JB: inline map lookup elem operations
+#if defined(__JB_x86_64__)
+static void *(* real_map_lookup_elem)(const void *map, const void *key) __maybe_unused = (void *)BPF_FUNC_map_lookup_elem;
+
+#define access_ptr_void(ptr, offset) (void *)((char *)ptr + offset)
+#define access_ptr_at_u64(ptr, offset) *(__u64*)((char *)ptr + offset)/
+
+// For percpu ops
+#define _KS_THIS_CPU_OFF 0xccccffff
+#define add_percpu_off(var) \
+	asm volatile (	\
+		"add %%gs:%1, %0"	\
+		: "+r"(var)	\
+		: "m"(*(__u64*) _KS_THIS_CPU_OFF)	\
+		: "cc", "memory"	\
+	)
+
+// For accessing contiguous array values
+#define BPF_ARR_VAL_OFF 0xaaaaffff
+#define indexed_elem_offset(index, elem_size)	(BPF_ARR_VAL_OFF + (__u64)index * elem_size)
+
+#define sizeof_member(map, member) sizeof(*((map)->member))
+// Smartly check attributes at compile time so sizes and offsets can be calculated and propagated
+#define inlined_map_lookup_elem(map, key) ({	\
+	void *__elem = NULL;	\
+	\
+	const int type = sizeof_member(map, type) / sizeof(int); \
+	if (type == BPF_MAP_TYPE_ARRAY) {	\
+		__u32 idx = *(__u32 *) key;	\
+		const __u32 max_entries = sizeof_member(map, max_entries) / sizeof(int);	\
+		const __u32 elem_size = __builtin_align_up(sizeof_member(map, value), 8);	\
+		\
+		if (idx < max_entries) __elem = access_ptr_void(map, indexed_elem_offset(idx, elem_size));	\
+	} else if (type == BPF_MAP_TYPE_ARRAY_OF_MAPS) {	\
+		__u32 idx = *(__u32 *) key;	\
+		const __u32 max_entries = sizeof_member(map, max_entries) / sizeof(int);	\
+		const __u32 elem_size = sizeof(__u64);	\
+		\
+		if (idx < max_entries) __elem = (void *) access_ptr_at_u64(map, indexed_elem_offset(idx, elem_size));	\
+	} else if (type == BPF_MAP_TYPE_PERCPU_ARRAY) {	\
+		__u32 idx = *(__u32 *) key;	\
+		const __u32 max_entries = sizeof_member(map, max_entries) / sizeof(int);	\
+		const __u32 elem_size = sizeof(__u64);	\
+		\
+		if (idx < max_entries) {	\
+			__elem = (void *) access_ptr_at_u64(map, indexed_elem_offset(idx, elem_size));	\
+			/* adjust the offset to the correct percpu memory area */	\
+			add_percpu_off(__elem);	\
+		}	\
+	} else {	\
+		__elem = real_map_lookup_elem(map, key);	\
+	}	\
+	__elem;	\
+})
+
+// JB: Even if we use __builtin_choose_expr, the compiler still evaluates and parses void* to the inline branch, causing
+// errors. For this, we define a fake map so that void* can be casted to struct __fake_map__* for this evaluation
+struct __fake_map__ {
+	unsigned int *type;
+	unsigned int *max_entries;
+	unsigned int *value;
+};
+
+#define is_void_ptr_type(ptr)	\
+	(__builtin_types_compatible_p(typeof(ptr), void*) || \
+	__builtin_types_compatible_p(typeof(ptr), const void*))
+
+#define __cast_fake(ptr) __builtin_choose_expr(	\
+	is_void_ptr_type(ptr),	\
+	(struct __fake_map__*) ptr,	\
+	ptr	\
+)
+
+#define map_lookup_elem(map, key) __builtin_choose_expr(	\
+	is_void_ptr_type(map),	\
+	real_map_lookup_elem(map, key),	\
+	inlined_map_lookup_elem(__cast_fake(map), key)	\
+)
+
+#else
 static void *BPF_FUNC(map_lookup_elem, const void *map, const void *key);
+#endif
+// JB: skip inlining for now as it adds more bytes
 static int BPF_FUNC(map_update_elem, const void *map, const void *key,
 		    const void *value, __u32 flags);
 static int BPF_FUNC(map_delete_elem, const void *map, const void *key);
+
 static void *BPF_FUNC(map_lookup_percpu_elem, void *map, const void *key,
 				unsigned int cpu);
 static long BPF_FUNC(for_each_map_elem, void *map, void *callback_fn,

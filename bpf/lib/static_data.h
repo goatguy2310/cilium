@@ -8,6 +8,24 @@
 
 #define __CONFIG_SECTION ".rodata.config"
 
+#if defined(__JB_x86_64__)
+#define DECLARE_CONFIG(type, name, description) \
+	__section(__CONFIG_SECTION) \
+	__attribute__((btf_decl_tag("kind:object"))) \
+	__attribute__((btf_decl_tag(description))) \
+	const type __config_##name;
+
+#define NODE_CONFIG(type, name, description) \
+	__section(__CONFIG_SECTION) \
+	__attribute__((btf_decl_tag("kind:node"))) \
+	__attribute__((btf_decl_tag(description))) \
+	const type __config_##name;
+
+#define ASSIGN_CONFIG(type, name, value) \
+	void __check_##name(void) \
+	{ CONFIG(name); }; \
+	const type __config_##name = value;
+#else
 /* Declare a global configuration variable that can be modified at runtime,
  * without needing to recompile the datapath. Access the variable using the
  * CONFIG() macro.
@@ -57,13 +75,14 @@
 	void __check_##name(void) \
 	{ CONFIG(name); /* Error: variable was assigned before declaring. */ }; \
 	volatile const type __config_##name = value;
+#endif
 
 /* Access a global configuration variable declared using DECLARE_CONFIG(). All
  * accesses must be done through this macro to ensure the loader's dead code
  * elimination can recognize them.
  */
-// JB: native compilation
 #if defined(__JB_x86_64__)
+/*
 #define CONFIG(name)	\
 (*({			\
 	void *out;	\
@@ -71,6 +90,9 @@
 			: "=r"(out));	\
 	(typeof(__config_##name) *)out;	\
 }))
+*/
+// JB: native compilation using direct access to allow const prop and DCE
+#define CONFIG(name) (__config_##name)
 #else
 #define CONFIG(name)	\
 (*({			\
