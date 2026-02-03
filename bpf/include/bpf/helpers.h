@@ -35,10 +35,10 @@
 static void *(* real_map_lookup_elem)(const void *map, const void *key) __maybe_unused = (void *)BPF_FUNC_map_lookup_elem;
 
 #define access_ptr_void(ptr, offset) (void *)((char *)ptr + offset)
-#define access_ptr_at_u64(ptr, offset) *(__u64*)((char *)ptr + offset)/
+#define access_ptr_at_u64(ptr, offset) *(__u64*)((char *)ptr + offset)
 
 // For percpu ops
-#define _KS_THIS_CPU_OFF 0xccccffff
+#define _KS_THIS_CPU_OFF 0xcccc0000
 #define add_percpu_off(var) \
 	asm volatile (	\
 		"add %%gs:%1, %0"	\
@@ -48,7 +48,7 @@ static void *(* real_map_lookup_elem)(const void *map, const void *key) __maybe_
 	)
 
 // For accessing contiguous array values
-#define BPF_ARR_VAL_OFF 0xaaaaffff
+#define BPF_ARR_VAL_OFF 0xaaaa0000
 #define indexed_elem_offset(index, elem_size)	(BPF_ARR_VAL_OFF + (__u64)index * elem_size)
 
 #define sizeof_member(map, member) sizeof(*((map)->member))

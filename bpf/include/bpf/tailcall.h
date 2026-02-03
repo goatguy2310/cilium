@@ -9,9 +9,9 @@
 #if defined(__JB_x86_64__)
 
 // offset of bpf_prog->bpf_func
-#define BPF_PROG_FUNC_OFF 0xffffaaaa
+#define BPF_PROG_FUNC_OFF 0xffff0000
 // offset of bpf_array->val
-#define BPF_ARR_VAL_OFF 0xaaaaffff
+#define BPF_ARR_VAL_OFF 0xaaaa0000
 
 #define indexed_elem_offset(index, elem_size)	(BPF_ARR_VAL_OFF + (__u64)index * elem_size)
 #define access_ptr_at_u64(ptr, offset) *(__u64*)((char *)ptr + offset)
