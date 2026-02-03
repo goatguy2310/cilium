@@ -6,26 +6,30 @@
 #include <bpf/compiler.h>
 #include "endian.h"
 
-#define __CONFIG_SECTION ".rodata.config"
 
-#if defined(__JB_x86_64__)
+#if defined(__JB_bpf__)
+#define __CONFIG_SECTION ".data.config"
+
 #define DECLARE_CONFIG(type, name, description) \
 	__section(__CONFIG_SECTION) \
 	__attribute__((btf_decl_tag("kind:object"))) \
 	__attribute__((btf_decl_tag(description))) \
-	const type __config_##name;
+	volatile type __config_##name;
 
 #define NODE_CONFIG(type, name, description) \
 	__section(__CONFIG_SECTION) \
 	__attribute__((btf_decl_tag("kind:node"))) \
 	__attribute__((btf_decl_tag(description))) \
-	const type __config_##name;
+	volatile type __config_##name;
 
 #define ASSIGN_CONFIG(type, name, value) \
 	void __check_##name(void) \
 	{ CONFIG(name); }; \
-	const type __config_##name = value;
+	volatile type __config_##name = value;
 #else
+
+#define __CONFIG_SECTION ".rodata.config"
+
 /* Declare a global configuration variable that can be modified at runtime,
  * without needing to recompile the datapath. Access the variable using the
  * CONFIG() macro.
@@ -81,17 +85,8 @@
  * accesses must be done through this macro to ensure the loader's dead code
  * elimination can recognize them.
  */
+// JB: disable propagation of config variables so no DCE can happen
 #if defined(__JB_x86_64__)
-#define CONFIG(name)	\
-({			\
-	const typeof(__config_##name) *__ptr;	\
-	asm volatile("movabsq $" __stringify(__config_##name) ", %0\n\t"	\
-			: "=r"(__ptr));	\
-	__builtin_assume(__ptr == &__config_##name);	\
-	/* (void)*(volatile typeof(__config_##name) *)__ptr; */	\
-	*__ptr;	\
-})
-/*
 #define CONFIG(name)	\
 (*({			\
 	void *out;	\
@@ -99,10 +94,9 @@
 			: "=r"(out));	\
 	(typeof(__config_##name) *)out;	\
 }))
-*/
-// JB: native compilation using direct access to allow const prop and DCE
 // #define CONFIG(name) (__config_##name)
 #else
+// JB: no more DCE here
 #define CONFIG(name)	\
 (*({			\
 	void *out;	\

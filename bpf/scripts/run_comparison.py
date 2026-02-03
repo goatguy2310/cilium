@@ -55,7 +55,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run binary size comparison between JITed and native compilation of Cilium")
     parser.add_argument("--jit-log", default="logs/jit_build.log", help="Log file for JIT build output")
     parser.add_argument("--native-log", default="logs/native_build.log", help="Log file for native build output")
+    parser.add_argument("--sort-obj", action="store_true", help="Sort output by total size of object files")
+    parser.add_argument("--sort-prog", action="store_true", help="Sort output of each obj file by size of programs")
+    parser.add_argument("--sort", action="store_true", help="Enable both sorting options")
     args = parser.parse_args()
+
+    if args.sort:
+        args.sort_obj = True
+        args.sort_prog = True
 
     print("Initializing JITed vs native compilation binary size experiment...")
 
@@ -65,7 +72,20 @@ if __name__ == "__main__":
     jit_sizes = get_jit_sizes(log_file=args.jit_log)
     nat_sizes = get_native_sizes(log_file=args.native_log)
 
-    for obj_file, jit_progs in jit_sizes.items():
+    if args.sort_obj:
+        def total_size(sizes):
+            return sum(sz for _, sz in sizes)
+        sorted_obj_files = sorted(
+            jit_sizes.keys(),
+            key=lambda of: (total_size(jit_sizes.get(of, [])), total_size(nat_sizes.get(of, []))),
+            reverse=True
+        )
+    else:
+        sorted_obj_files = sorted(jit_sizes.keys())
+
+    for obj_file in sorted_obj_files:
+        jit_progs = jit_sizes[obj_file]
+
         if obj_file not in nat_sizes:
             continue
 
@@ -86,6 +106,11 @@ if __name__ == "__main__":
         if not rows:
             continue
 
+        if args.sort_prog:
+            rows.sort(key=lambda r: (r[1], r[2]), reverse=True)
+        else:
+            rows.sort(key=lambda r: r[0])
+
         # Calculate totals
         total_diff = nat_total - jit_total
         total_pct = ((nat_total - jit_total) / jit_total * 100) if jit_total != 0 else None
@@ -102,7 +127,7 @@ if __name__ == "__main__":
         col_diff = max(len("Diff"), len(f"**{total_pct_str}**"), max(len(fmt_diff(d, p)) for _, _, _, d, p in rows))
 
         # Print markdown table
-        print(f"\n## {obj_file}\n")
+        print(f"\n### {obj_file}\n")
         print(f"| {'Program':<{col_prog}} | {'JIT Size':>{col_jit}} | {'Native Size':>{col_nat}} | {'Diff':>{col_diff}} |")
         print(f"|{'-' * (col_prog + 2)}|{'-' * (col_jit + 2)}|{'-' * (col_nat + 2)}|{'-' * (col_diff + 2)}|")
         for prog, jit_sz, nat_sz, diff, pct in rows:

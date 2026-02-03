@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--files", nargs="*", type=str, help="Path to the BPF object file(s) to extract JITed code out of. Leave empty to search from current directory.")
     parser.add_argument("--output_dir", type=str, help="Directory where the output dump will be saved.")
-    parser.add_argument("--no_globalize", action="store_true")
+    parser.add_argument("--no_globalize", action="store_true", help="Option to globalize files before loading and dumping them. Defaults to true")
 
     args = parser.parse_args()
 
