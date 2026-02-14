@@ -7,6 +7,9 @@ JB =
 BPF_SIMPLE = bpf_network.o bpf_alignchecker.o
 BPF = bpf_lxc.o bpf_overlay.o bpf_sock.o bpf_host.o bpf_wireguard.o bpf_xdp.o $(BPF_SIMPLE)
 
+BPF_SIMPLE_IR = $(patsubst %.o,%.ll,$(BPF_SIMPLE))
+BPF_IR = $(patsubst %.o,%.ll,$(BPF))
+
 KERNEL ?= netnext
 
 BPF_SIMPLE_OPTIONS ?= \
@@ -166,7 +169,7 @@ else ifeq ($(JB), bpf)
 CLANG_FLAGS += -D__JB_bpf__
 endif
 
-.PHONY: all bpf_all build_all install clean generate gen_compile_commands
+.PHONY: all bpf_all build_all install clean generate gen_compile_commands ir
 
 all: bpf_all
 
@@ -258,3 +261,49 @@ ifeq (, $(BEAR_CLI))
 else
 	bear -- make
 endif
+
+# --------------------- LLVM-IR related rules ---------------------
+
+# O0, no inline flags
+ir: 
+ir: $(BPF_IR)
+
+$(BPF_SIMPLE_IR): %.ll: %.c
+	@$(ECHO_LLVM)
+	$(QUIET) ${CLANG} ${BPF_SIMPLE_OPTIONS} ${CLANG_FLAGS} -S -emit-llvm $< -o $@
+
+ifneq ($(BUILD_PERMUTATIONS),)
+define PERMUTATION_LL_template =
+$(1)::
+	@$$(ECHO_LLVM) " [$(subst :,=1$(space),$(2))]"
+	$$(QUIET) $${CLANG} $(subst :,=1$(space),$(2)) $${CLANG_FLAGS} -S -emit-llvm $(patsubst %.o,%.c,$(1)) -o $(patsubst %.o,%.ll,$(1))
+endef
+endif
+
+bpf_sock.ll:: bpf_sock.c $(LIB)
+	@$(ECHO_LLVM)
+	$(QUIET) ${CLANG} ${MAX_LB_OPTIONS} ${CLANG_FLAGS} -S -emit-llvm $< -o $@
+
+bpf_sock_term.ll:: bpf_sock_term.c $(LIB)
+	@$(ECHO_LLVM)
+	$(QUIET) ${CLANG} ${MAX_LB_OPTIONS} ${CLANG_FLAGS} -S -emit-llvm $< -o $@
+
+bpf_overlay.ll:: bpf_overlay.c $(LIB)
+	@$(ECHO_LLVM)
+	$(QUIET) ${CLANG} ${MAX_OVERLAY_OPTIONS} ${CLANG_FLAGS} -S -emit-llvm $< -o $@
+
+bpf_host.ll:: bpf_host.c $(LIB)
+	@$(ECHO_LLVM)
+	$(QUIET) ${CLANG} ${MAX_HOST_OPTIONS} ${CLANG_FLAGS} -S -emit-llvm $< -o $@
+
+bpf_wireguard.ll:: bpf_wireguard.c $(LIB)
+	@$(ECHO_LLVM)
+	$(QUIET) ${CLANG} ${MAX_WIREGUARD_OPTIONS} ${CLANG_FLAGS} -S -emit-llvm $< -o $@
+
+bpf_xdp.ll:: bpf_xdp.c $(LIB)
+	@$(ECHO_LLVM)
+	$(QUIET) ${CLANG} ${MAX_XDP_OPTIONS} ${CLANG_FLAGS} -S -emit-llvm $< -o $@
+
+bpf_lxc.ll:: bpf_lxc.c $(LIB)
+	@$(ECHO_LLVM)
+	$(QUIET) ${CLANG} ${MAX_LXC_OPTIONS} ${CLANG_FLAGS} -S -emit-llvm $< -o $@

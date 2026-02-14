@@ -30,8 +30,8 @@
 #endif
 
 /* Map access/manipulation */
-// JB: inline map lookup elem operations
-#if defined(__JB_x86_64__)
+// JB: inline map lookup elem operations when fair nativev backend needs fair output
+#if defined(__JB_inline_helpers__)
 static void *(* real_map_lookup_elem)(const void *map, const void *key) __maybe_unused = (void *)BPF_FUNC_map_lookup_elem;
 
 #define access_ptr_void(ptr, offset) (void *)((char *)ptr + offset)

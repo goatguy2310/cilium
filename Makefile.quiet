@@ -15,6 +15,7 @@ ifeq ($(V),0)
 	ECHO_GINKGO=echo "  GINKGO $(RELATIVE_DIR)"
 	ECHO_GO=echo "  GO     $(RELATIVE_DIR)/$@"
 	ECHO_TEST=echo "  TEST "
+	ECHO_LLVM=echo "  LLVM     $(RELATIVE_DIR)/$@"
 	SUBMAKEOPTS="-s"
 else
 	# The whitespace at below EOLs is required for verbose case!
@@ -26,5 +27,6 @@ else
 	ECHO_GINKGO=: 
 	ECHO_GO=: 
 	ECHO_TEST=: 
+	ECHO_LLVM=: 
 	SUBMAKEOPTS=
 endif
