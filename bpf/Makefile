@@ -169,6 +169,10 @@ else ifeq ($(JB), bpf)
 CLANG_FLAGS += -D__JB_bpf__
 endif
 
+ifdef STATS
+CLANG_FLAGS += -Xclang -print-stats
+endif
+
 .PHONY: all bpf_all build_all install clean generate gen_compile_commands ir
 
 all: bpf_all
@@ -264,8 +268,10 @@ endif
 
 # --------------------- LLVM-IR related rules ---------------------
 
-# O0, no inline flags
-ir: 
+# Remove opt level, disable all opt passes
+%.ll: CLANG_FLAGS := $(filter-out -O2,$(CLANG_FLAGS))
+%.ll: CLANG_FLAGS += -O0 -Xclang -disable-llvm-passes -Xclang -disable-O0-optnone
+
 ir: $(BPF_IR)
 
 $(BPF_SIMPLE_IR): %.ll: %.c

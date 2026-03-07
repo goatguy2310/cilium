@@ -13,7 +13,7 @@ CLANG_FLAGS_NATIVE += -ftrap-function=__undefined_trap	\
 		-Wimplicit-int-conversion -Wenum-conversion	\
 		-Wimplicit-fallthrough
 CLANG_FLAGS_NATIVE += -Wno-unknown-attributes -Wno-unused-parameter	\
-		-Wno-pointer-sign -Wno-compare-distinct-pointer-types -mcmodel=large 	\
+		-Wno-pointer-sign -Wno-compare-distinct-pointer-types -mcmodel=large	\
 		-fno-pic -fno-pie -fcf-protection=branch	\
 		-mskip-rax-setup -fno-jump-tables -mno-red-zone	\
 		-mno-sse -mno-sse2 -mno-avx -mno-mmx -mno-80387 -mno-fp-ret-in-387	\

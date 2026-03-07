@@ -8,8 +8,6 @@
 // JB: native compilation
 #if defined(__JB_x86_64__)
 
-#if defined(__JB_inline_helpers__)
-
 // offset of bpf_prog->bpf_func
 #define BPF_PROG_FUNC_OFF 0xffff0000
 // offset of bpf_array->val
@@ -49,34 +47,14 @@
 	tail_call_native(ctx_ptr, map, slot);			\
 }
 
-#else
-
-#define tail_call_static(ctx_ptr, map, slot)				\
-{								\
-	if (!__builtin_constant_p(slot))			\
-		__throw_build_bug();				\
-								\
-	asm volatile("movq %[ctx], %%rdi\n\t"				\
-		"movabsq $" __stringify(map) ", %%rsi\n\t"		\
-		"movl %[slot_idx], %%edx\n\t"				\
-		"callq *%%rax\n\t"					\
-		:: [ctx]"r"(ctx_ptr), [slot_idx]"i"(slot), [fn]"a"(tail_call)	\
-		: "rdi", "rsi", "rdx", "rcx", "r8", "r9");		\
-}
-
-static __always_inline __maybe_unused void
-tail_call_dynamic(struct __ctx_buff *ctx, const void *map, __u32 slot)
-{
-	if (__builtin_constant_p(slot))
-		__throw_build_bug();
-
-	/* Only for the case where slot is not known at compilation time,
-	 * we give LLVM a free pass to optimize since we cannot do much
-	 * here anyway as x86-64 JIT will emit a retpoline for this case.
-	 */
-	tail_call(ctx, map, slot);
-}
-#endif
+// static __always_inline __maybe_unused void
+// tail_call_dynamic(struct __ctx_buff *ctx, const void *map, __u32 slot)
+// {
+//	if (__builtin_constant_p(slot))
+//		__throw_build_bug();
+//	
+//	tail_call_native(ctx, map, slot);
+// }
 #elif defined(__bpf__)
 
 /* Don't gamble, but _guarantee_ that LLVM won't optimize setting
